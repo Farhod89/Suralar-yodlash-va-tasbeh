@@ -1,4 +1,4 @@
-const CACHE_NAME = 'suralar-yodlash-v2';
+const CACHE_NAME = 'suralar-yodlash-v3';
 const ASSETS = [
   './',
   './index.html',
