@@ -88,32 +88,43 @@
   .menu-card .sinfo{font-size:.78rem;color:var(--ink-dim);margin-top:4px;}
 
   /* ---------- Tasbih (salovot) ---------- */
+  .tasbih-tapzone{
+    position:fixed;
+    left:5%; right:5%; top:9%; bottom:5%;
+    z-index:1;
+    cursor:pointer;
+  }
   .tasbih-wrap{
+    position:relative; z-index:2;
     background:linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
     border:1px solid var(--line);border-radius:22px;
     padding:26px 18px 30px;text-align:center;
     box-shadow:0 10px 30px rgba(0,0,0,.3);
     user-select:none;
   }
+  .tasbih-hint{font-size:.74rem;color:var(--ink-dim);margin-bottom:14px;opacity:.85;}
+  .btn-vibrate{
+    background:transparent;color:var(--ink-dim);border:1px solid var(--line);
+  }
+  .btn-vibrate.on{color:var(--gold-soft);border-color:var(--gold);}
   .tasbih-arabic{font-size:1.6rem;color:var(--gold-soft);margin-bottom:8px;line-height:1.6;}
   .tasbih-cyr{font-size:1.15rem;color:var(--ink-dim);margin-bottom:22px;}
   .tasbih-btn{
-    width:100%;
+    width:min(78vw, 46vh, 420px);
     background:radial-gradient(circle at 50% 30%, #2f7a52, #17402a);
     color:#eafff0;
     border:2px solid var(--gold);
     border-radius:50%;
     aspect-ratio:1/1;
-    max-width:230px;
     margin:0 auto 20px;
-    font-size:1.05rem;
+    font-size:1.15rem;
     font-weight:700;
-    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;
-    box-shadow:0 10px 26px rgba(47,122,82,.4);
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+    box-shadow:0 10px 36px rgba(47,122,82,.45);
     cursor:pointer;
   }
-  .tasbih-btn:active{transform:scale(.96);}
-  .tasbih-count-big{font-size:2.4rem;font-variant-numeric:tabular-nums;}
+  .tasbih-btn:active{transform:scale(.97);}
+  .tasbih-count-big{font-size:clamp(2.6rem, 11vw, 4.2rem);font-variant-numeric:tabular-nums;}
   .tasbih-stats{
     display:flex;justify-content:center;gap:22px;margin-bottom:16px;font-size:.92rem;color:var(--ink-dim);
   }
@@ -527,6 +538,9 @@ function dailyQuotaKey(id){ return 'voqea10_dailyquota_'+id; }
 function dailyDayKey(id){ return 'voqea10_dailyday_'+id; }
 function incrKey(id){ return 'voqea10_incr_'+id; }
 function salovotTargetKey(id){ return 'voqea10_sal_target_'+id; }
+function vibrationOnKey(){ return 'voqea10_vibration_on'; }
+function isVibrationOn(){ return lsGet(vibrationOnKey(), '1') === '1'; }
+function setVibrationOn(v){ lsSet(vibrationOnKey(), v ? '1' : '0'); }
 function salovotCountKey(id){ return 'voqea10_sal_count_'+id; }
 function salovotCyclesKey(id){ return 'voqea10_sal_cycles_'+id; }
 
@@ -663,11 +677,13 @@ function renderSalovotCounter(){
   const count = parseInt(lsGet(salovotCountKey(id), '0'), 10);
   const cycles = lsGet(salovotCyclesKey(id), '0');
 
+  const vibOn = isVibrationOn();
   appEl.innerHTML = `
     <div class="backbar">
       <button class="btn-back" id="btnSalovotBack">← Саловотлар</button>
       <div class="active-sname">${s.name}</div>
     </div>
+    <div class="tasbih-tapzone" id="tasbihTapZone"></div>
     <div class="tasbih-wrap">
       <div class="tasbih-arabic">${s.arabic}</div>
       <div class="tasbih-cyr">${s.name}</div>
@@ -676,6 +692,7 @@ function renderSalovotCounter(){
         <div class="tasbih-count-big" id="tasbihCount">${count}</div>
         <div style="font-size:.75rem;opacity:.85;">босинг</div>
       </div>
+      <div class="tasbih-hint">Экраннинг исталган жойига теккизиб ҳам ҳисоблаш мумкин</div>
 
       <div class="tasbih-stats">
         <div>Айтилди: <b id="statSaid">${count}</b></div>
@@ -684,6 +701,7 @@ function renderSalovotCounter(){
 
       <div class="tasbih-actions">
         <button class="btn-minus" id="tasbihMinus">−1</button>
+        <button class="btn-vibrate ${vibOn?'on':''}" id="tasbihVibrate">${vibOn?'🔔 Вибрация ёқиқ':'🔕 Вибрация ўчиқ'}</button>
         <button class="btn-target" id="tasbihTarget">🎯 Мақсадни ўзгартириш</button>
         <button class="btn-reset-tasbih" id="tasbihReset">↺ Ҳисобни бошидан бошлаш</button>
       </div>
@@ -692,13 +710,20 @@ function renderSalovotCounter(){
   `;
 
   document.getElementById('btnSalovotBack').addEventListener('click', renderSalovotMenu);
-  document.getElementById('tasbihTarget').addEventListener('click', ()=> showTargetModal(id));
-  document.getElementById('tasbihReset').addEventListener('click', ()=>{
+  document.getElementById('tasbihTarget').addEventListener('click', (e)=>{ e.stopPropagation(); showTargetModal(id); });
+  document.getElementById('tasbihReset').addEventListener('click', (e)=>{
+    e.stopPropagation();
     lsSet(salovotCountKey(id), '0');
     renderSalovotCounter();
   });
-  document.getElementById('tasbihMinus').addEventListener('click', ()=> tasbihChange(-1));
-  document.getElementById('tasbihBtn').addEventListener('click', ()=> tasbihChange(1));
+  document.getElementById('tasbihMinus').addEventListener('click', (e)=>{ e.stopPropagation(); tasbihChange(-1); });
+  document.getElementById('tasbihVibrate').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    setVibrationOn(!isVibrationOn());
+    renderSalovotCounter();
+  });
+  document.getElementById('tasbihBtn').addEventListener('click', (e)=>{ e.stopPropagation(); tasbihChange(1); });
+  document.getElementById('tasbihTapZone').addEventListener('click', ()=> tasbihChange(1));
 }
 
 function tasbihChange(delta){
@@ -707,7 +732,7 @@ function tasbihChange(delta){
   let count = parseInt(lsGet(salovotCountKey(id), '0'), 10) + delta;
   if(count < 0) count = 0;
 
-  if(navigator.vibrate && delta>0){ try{ navigator.vibrate(12); }catch(e){} }
+  if(navigator.vibrate && delta>0 && isVibrationOn()){ try{ navigator.vibrate(12); }catch(e){} }
 
   if(target>0 && count >= target){
     lsSet(salovotCountKey(id), '0');
